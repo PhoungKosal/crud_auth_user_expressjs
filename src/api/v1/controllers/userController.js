@@ -1,7 +1,10 @@
 const { generateToken } = require('../../../configs/jwtToken');
 const User = require('../models/userModel');
 const asyncHandler = require('express-async-handler');
-
+const {generateRefreshToken} = require('../../../configs/refreshtoken')
+// validateMongoose
+const validateMongoDBID = require('../validations/validateMongoDB');
+const jwt = require('jsonwebtoken');
 // Create user
 const createUser = asyncHandler(async (req, res) => {
     const email = req.body.email;
@@ -26,7 +29,7 @@ const createUser = asyncHandler(async (req, res) => {
 // login user
 const loginUser = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
-    
+
     // Check if a user with the given email exists
     const findUser = await User.findOne({ email });
 
@@ -35,21 +38,81 @@ const loginUser = asyncHandler(async (req, res) => {
         const isPasswordMatched = await findUser.isPasswordMatched(password);
 
         if (isPasswordMatched) {
+            const refreshToken = await generateRefreshToken(findUser._id);
+
+            // Update the refreshToken for the user
+            await User.findByIdAndUpdate(findUser._id, { refreshToken });
+
+            res.cookie('refreshToken', refreshToken, {
+                httpOnly: true,
+                maxAge: 72 * 60 * 60 * 1000,
+            });
+
             // Passwords match, so send the user data as a response
-            res.json({
-                _id: findUser?._id,
-                firstname: findUser?.firstname,
-                lastname: findUser?.lastname,
-                email: findUser?.email,
-                mobile: findUser?.mobile,
-                token: generateToken(findUser?._id),
+            return res.json({
+                _id: findUser._id,
+                firstname: findUser.firstname,
+                lastname: findUser.lastname,
+                email: findUser.email,
+                mobile: findUser.mobile,
+                token: generateToken(findUser._id),
             });
         }
     }
 
     // If the user does not exist or the passwords do not match, return an error response.
-    res.status(400).json({ error: 'Invalid Credentials' });
+    return res.status(400).json({ error: 'Invalid email or password' });
 });
+
+// handle refresh token
+const handleRefreshToken = asyncHandler(async (req, res) => {
+    const cookie = req.cookies;
+    if (!cookie?.refreshToken) throw new Error('No refresh token in the cookie');
+    const refreshToken = cookie.refreshToken;
+    const user = await User.findOne({ refreshToken });
+    
+    if (!user) throw new Error('No Refresh token present in the db or does not match');
+    
+    jwt.verify(refreshToken, process.env.JWT_SECRET, (err, decoded) => {
+        if (err || user.id !== decoded.id) {
+            throw new Error('There is something wrong with the refresh token');
+        }
+        const accessToken = generateToken(user._id);
+        res.json({ accessToken });
+    });
+});
+
+// logout functionality
+const logout = asyncHandler(async (req, res) => {
+    const cookie = req.cookies;
+    if (!cookie?.refreshToken) {
+        return res.status(400).json({ message: 'No refresh token in the cookie' });
+    }
+    const refreshToken = cookie.refreshToken;
+
+    try {
+        const user = await User.findOne({ refreshToken });
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found with the given refreshToken' });
+        }
+
+        await User.findByIdAndUpdate(user._id, {
+            refreshToken: '',
+        });
+
+        res.clearCookie('refreshToken', {
+            httpOnly: true,
+            secure: true,
+        });
+
+        res.sendStatus(204);
+    } catch (error) {
+        return res.status(500).json({ message: 'An error occurred while processing the logout request' });
+    }
+});
+
+
 
 
 // get all the users
@@ -65,27 +128,33 @@ const getallUser = asyncHandler(async (req, res) => {
 
 // Get a single user by ID
 const getSingleUser = asyncHandler(async (req, res) => {
-    console.log(req.params)
-    const userId = req.params.id; // Assuming the user ID is provided as a route parameter
+    const userId = req.params.id;
 
     try {
+        // Check if the userId is a valid MongoDB ObjectId
+        validateMongoDBID(userId);
+
         const user = await User.findById(userId);
-        
+
         if (!user) {
             res.status(404).json({ error: 'User not found' });
         } else {
-            res.json({user});
+            res.json({ user });
         }
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 });
 
+
 // Update a user by ID
 const updateUser = asyncHandler(async (req, res) => {
-    const userId = req.params.id; // Assuming the user ID is provided as a route parameter
+    const userId = req.params.id;
 
     try {
+        // Check if the userId is a valid MongoDB ObjectId
+        validateMongoDBID(userId);
+
         const user = await User.findById(userId);
 
         if (!user) {
@@ -103,16 +172,21 @@ const updateUser = asyncHandler(async (req, res) => {
             res.json({ message: 'User updated successfully' });
         }
     } catch (error) {
-        res.status(404).json({ error: ' not found' });
+        // Corrected the status code and error message
+        res.status(500).json({ error: error.message });
     }
 });
 
 
+
 // Delete a user by ID
 const deleteUser = asyncHandler(async (req, res) => {
-    const userId = req.params.id; // Assuming the user ID is provided as a route parameter
+    const userId = req.params.id;
 
     try {
+        // Check if the userId is a valid MongoDB ObjectId
+        validateMongoDBID(userId);
+
         const user = await User.findById(userId);
 
         if (!user) {
@@ -122,92 +196,16 @@ const deleteUser = asyncHandler(async (req, res) => {
             res.json({ message: 'User deleted successfully' });
         }
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        // Corrected the status code and error message
+        res.status(500).json({ error: error.message });
     }
 });
-
-// // block user 
-// const blockUser = async (req, res) => {
-//     try {
-//       const { userIdToBlock } = req.params;
-  
-//       // Find the user to be blocked in the database
-//       const userToBlock = await User.findById(userIdToBlock);
-  
-//       if (!userToBlock) {
-//         return res.status(404).json({ error: 'User not found' });
-//       }
-  
-//       // Check if the user performing the block is an admin or has the authority to do so
-//       if (req.user.role !== 'admin') {
-//         return res.status(403).json({ error: 'Permission denied' });
-//       }
-  
-//       // Update the user's status to indicate that they are blocked
-//       userToBlock.isBlocked = true;
-//       await userToBlock.save();
-  
-//       return res.status(200).json({ message: 'User blocked successfully' });
-//     } catch (error) {
-//       console.error(error);
-//       return res.status(500).json({ error: 'Internal server error' });
-//     }
-// };
-
-// // Controller function for unblocking a user
-// const unblockUserController = async (req, res) => {
-//     try {
-//       const { userIdToUnblock } = req.params;
-  
-//       // Find the user to be unblocked in the database
-//       const userToUnblock = await User.findById(userIdToUnblock);
-  
-//       if (!userToUnblock) {
-//         return res.status(404).json({ error: 'User not found' });
-//       }
-  
-//       // Check if the user performing the unblock is an admin or has the authority to do so
-//       if (req.user.role !== 'admin') {
-//         return res.status(403).json({ error: 'Permission denied' });
-//       }
-  
-//       // Update the user's status to indicate that they are unblocked
-//       userToUnblock.isBlocked = false;
-//       await userToUnblock.save();
-  
-//       return res.status(200).json({ message: 'User unblocked successfully' });
-//     } catch (error) {
-//       console.error(error);
-//       return res.status(500).json({ error: 'Internal server error' });
-//     }
-// };
-  
-// const unblock = asyncHandler(async(req, res)=>{
-//     const {id} = req.params;
-//     try {
-//         const unblocked = User.findOneAndUpdate(
-//             id,
-//         {
-//             isBlocked:false,
-//         },
-//         {
-//             new:true,
-//         }
-//       );
-//       res.json({
-//         message: "User Unblock"
-//       })
-//     } catch (error) {
-//         throw new Error(error)
-//     }
-// })
-
-
 
 // blcoked user 
 
 const block = asyncHandler(async (req, res) => {
     const { id } = req.params;
+    validateMongoDBID(id);
     try {
       const blocked = await User.findOneAndUpdate(
         { _id: id }, // Use the _id field for the user to block
@@ -219,17 +217,17 @@ const block = asyncHandler(async (req, res) => {
         return res.status(404).json({ error: 'User not found' });
       }
   
-      res.json({
-        message: "User Blocked",
-      });
+      res.json(blocked)
     } catch (error) {
       throw new Error(error);
     }
 });
 
+
 // unblock the user
 const unblock = asyncHandler(async (req, res) => {
     const { id } = req.params;
+    validateMongoDBID(id);
     try {
       const unblocked = await User.findOneAndUpdate(
         { _id: id }, // Use the _id field for the user to unblock
@@ -245,9 +243,11 @@ const unblock = asyncHandler(async (req, res) => {
         message: "User Unblocked",
       });
     } catch (error) {
-        throw new Error(error);
+      // Properly handle errors by sending an error response
+      res.status(500).json({ error: error.message });
     }
 });
+
   
   
 
@@ -260,4 +260,6 @@ module.exports = {
     updateUser,
     block,
     unblock,
+    handleRefreshToken,
+    logout,
 };

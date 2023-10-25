@@ -31,6 +31,9 @@ const userSchema = new mongoose.Schema({
     isBlocked:{
         type:Boolean,
         default:false,
+    },
+    refreshToken:{
+        type:String,
     }
 },{
     timestamps: true,
