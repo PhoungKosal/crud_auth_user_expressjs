@@ -66,12 +66,10 @@ const loginUser = asyncHandler(async (req, res) => {
         res.cookie("refreshToken", refreshToken, {
           httpOnly: true,
           maxAge: 72 * 60 * 60 * 1000,
-          domain: "localhost",
         });
         res.cookie("accessToken", generateToken(findUser._id), {
           httpOnly: true,
           maxAge: 72 * 60 * 60 * 1000,
-          domain: "localhost",
         });
 
         // Passwords match, so send the user data as a response
