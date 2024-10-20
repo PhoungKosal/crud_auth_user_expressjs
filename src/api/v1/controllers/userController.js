@@ -69,6 +69,7 @@ const loginUser = asyncHandler(async (req, res) => {
           maxAge: 72 * 60 * 60 * 1000, // 3 days
           secure: true, // Set to true in production (requires HTTPS)
           sameSite: "none", // Allow cross-origin cookie sharing
+          domain: "localhost",
         });
 
         res.cookie("accessToken", generateToken(findUser._id), {
@@ -76,6 +77,7 @@ const loginUser = asyncHandler(async (req, res) => {
           maxAge: 72 * 60 * 60 * 1000, // 3 days
           secure: true, // Set to true in production (requires HTTPS)
           sameSite: "none", // Allow cross-origin cookie sharing
+          domain: "localhost",
         });
 
         // Passwords match, so send the user data as a response
