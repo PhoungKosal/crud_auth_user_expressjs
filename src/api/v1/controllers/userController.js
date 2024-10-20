@@ -63,13 +63,20 @@ const loginUser = asyncHandler(async (req, res) => {
         // Update the refreshToken for the user
         await User.findByIdAndUpdate(findUser._id, { refreshToken });
 
+        // Set refreshToken cookie
         res.cookie("refreshToken", refreshToken, {
           httpOnly: true,
-          maxAge: 72 * 60 * 60 * 1000,
+          maxAge: 72 * 60 * 60 * 1000, // 3 days
+          secure: false, // Set to false during local development; true for production
+          sameSite: "none", // Allow cross-site cookie sharing
         });
+
+        // Set accessToken cookie
         res.cookie("accessToken", generateToken(findUser._id), {
           httpOnly: true,
-          maxAge: 72 * 60 * 60 * 1000,
+          maxAge: 72 * 60 * 60 * 1000, // 3 days
+          secure: false, // Set to false during local development; true for production
+          sameSite: "none", // Allow cross-site cookie sharing
         });
 
         // Passwords match, so send the user data as a response
