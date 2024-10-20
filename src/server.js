@@ -27,7 +27,7 @@ app.use(cookieParser());
 app.use("/api/user", authRouter);
 
 app.get("/", (req, res) => {
-  res.send("Hello World");
+  res.send("Hello World updated");
 });
 
 if (process.env.NODE_ENV !== "production") {

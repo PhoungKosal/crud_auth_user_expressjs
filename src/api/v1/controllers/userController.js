@@ -67,16 +67,15 @@ const loginUser = asyncHandler(async (req, res) => {
         res.cookie("refreshToken", refreshToken, {
           httpOnly: true,
           maxAge: 72 * 60 * 60 * 1000, // 3 days
-          secure: false, // Set to false during local development; true for production
-          sameSite: "none", // Allow cross-site cookie sharing
+          secure: true, // Set to true in production (requires HTTPS)
+          sameSite: "none", // Allow cross-origin cookie sharing
         });
 
-        // Set accessToken cookie
         res.cookie("accessToken", generateToken(findUser._id), {
           httpOnly: true,
           maxAge: 72 * 60 * 60 * 1000, // 3 days
-          secure: false, // Set to false during local development; true for production
-          sameSite: "none", // Allow cross-site cookie sharing
+          secure: true, // Set to true in production (requires HTTPS)
+          sameSite: "none", // Allow cross-origin cookie sharing
         });
 
         // Passwords match, so send the user data as a response
