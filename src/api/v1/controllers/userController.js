@@ -69,15 +69,14 @@ const loginUser = asyncHandler(async (req, res) => {
           maxAge: 72 * 60 * 60 * 1000, // 3 days
           secure: true, // Set to true in production (requires HTTPS)
           sameSite: "none", // Allow cross-origin cookie sharing
-          domain: "localhost",
         });
 
-        res.cookie("accessToken", generateToken(findUser._id), {
+        const accessToken = generateToken(findUser._id);
+        res.cookie("accessToken", accessToken, {
           httpOnly: true,
           maxAge: 72 * 60 * 60 * 1000, // 3 days
           secure: true, // Set to true in production (requires HTTPS)
           sameSite: "none", // Allow cross-origin cookie sharing
-          domain: "localhost",
         });
 
         // Passwords match, so send the user data as a response
@@ -88,7 +87,7 @@ const loginUser = asyncHandler(async (req, res) => {
           lastname: findUser.lastname,
           email: findUser.email,
           mobile: findUser.mobile,
-          token: generateToken(findUser._id),
+          token: accessToken,
         });
       }
     }
