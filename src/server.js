@@ -14,7 +14,7 @@ connectDB();
 
 app.use(
   cors({
-    origin: true,
+    origin: "https://e-commerce-tan-rho.vercel.app",
     credentials: true,
   })
 );
