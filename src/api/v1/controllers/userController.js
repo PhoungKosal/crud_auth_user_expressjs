@@ -63,20 +63,24 @@ const loginUser = asyncHandler(async (req, res) => {
         // Update the refreshToken for the user
         await User.findByIdAndUpdate(findUser._id, { refreshToken });
 
-        res.cookie("refreshToken", refreshToken, {
+        res.cookie('accessToken', accessToken, {
           httpOnly: true,
-          maxAge: 72 * 60 * 60 * 1000, // 3 days
-          secure: true, // Set to true in production (requires HTTPS)
-          sameSite: "none", // Allow cross-origin cookie sharing
+          secure: true, // ensure it's only sent over HTTPS
+          sameSite: 'None', // allow cross-site cookie
+          domain: 'mern-stack-express.vercel.app', // backend domain
+          path: '/',
+          expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // example expiration
         });
 
-        const accessToken = generateToken(findUser._id);
-        res.cookie("accessToken", accessToken, {
+        res.cookie('refreshToken', refreshToken, {
           httpOnly: true,
-          maxAge: 72 * 60 * 60 * 1000, // 3 days
-          secure: true, // Set to true in production (requires HTTPS)
-          sameSite: "none", // Allow cross-origin cookie sharing
+          secure: true,
+          sameSite: 'None',
+          domain: 'mern-stack-express.vercel.app',
+          path: '/',
+          expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         });
+
 
         // Passwords match, so send the user data as a response
         return res.json({
