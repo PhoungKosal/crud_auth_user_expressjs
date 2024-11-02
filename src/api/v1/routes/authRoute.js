@@ -18,7 +18,7 @@ router.post("/login", loginUser);
 router.get("/all-users", getallUser);
 router.get("/refresh", handleRefreshToken);
 router.get("/logout", logout);
-router.get("/:id", authMiddleware, isAdmin, getSingleUser);
+router.get("/:id", authMiddleware, getSingleUser);
 router.delete("/:id", deleteUser);
 router.put("/:id", authMiddleware, isAdmin, updateUser);
 router.put("/block-user/:id", authMiddleware, isAdmin, block);
