@@ -157,6 +157,7 @@ const logout = asyncHandler(async (req, res) => {
 // get all the users
 const getallUser = asyncHandler(async (req, res) => {
   try {
+     validateMongoDBID(userId);
     const getUsers = await User.find();
     res.json({ getUsers });
   } catch (error) {
